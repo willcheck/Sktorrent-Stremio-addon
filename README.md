@@ -43,6 +43,9 @@ http://localhost:7000/manifest.json
 - Choď na Add-ons > Community Add-ons > "Install via URL"
 - Vlož adresu: http://localhost:7000/manifest.json
 
+  Alternatívny postup inštalácie doplnku do aplikácie Stremio:
+- V aplikácii Stremio klikni na "Addons" a potom na tlačidlo "Add addon" alebo jednoducho zadaj nasledovný odkaz do vyhľadávacieh poľa zadaj nasleodovný URL a nainštaluj doplnok: http://127.0.0.1:7000/manifest.json
+
 ## 📁 Konfigurácia
 
 Autentifikácia na stránke SKTorrent.eu je pre lokálne testovanie doplnku momentálne riešená pevne zadanými cookies (uid, pass) v zdrojovom kóde. Každý používateľ by si mal upraviť svoj vlastný login údaj pre korektné fungovanie:
