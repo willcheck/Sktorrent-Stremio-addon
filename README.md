@@ -65,3 +65,8 @@ Tento projekt **nepropaguje pirátstvo**, ale demonštruje technické možnosti 
 ## 🛠 Licencia
 
 MIT License (voľné použitie, bez záruky)
+
+## 👨‍💻 Autor
+
+Tento doplnok je experimentálny projekt na osobné účely.
+Ak máš návrhy na vylepšenie alebo chceš prispieť – neváhaj a pošli pull request.
