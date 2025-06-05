@@ -28,7 +28,7 @@ npm install axios cheerio stremio-addon-sdk axios-cookiejar-support tough-cookie
 
 Poznámka: Je odporúčané používať Node.js verziu >=18, testované s Node.js v20.09 LTS
 
-### 3. Spustenie lokálneho servera
+### 3. Spustenie lokálneho servera (v príkazovom riadku sa potom zobrazujú debug správy)
 ```bash
 node sktorrent-addon.js
 ```
