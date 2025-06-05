@@ -1,6 +1,6 @@
 # Sktorrent-Stremio-addon
 
-Tento neoficiálny doplnok pre [Stremio](https://www.stremio.com/) umožňuje vyhľadávať a streamovať filmy a seriály z populárneho slovenského torrent trackera **SKTorrent.eu** priamo cez Stremio rozhranie. Inšpiráciou pre vytvorenie tohto doplnku bol populárny Stremio doplnok [Torrentio](https://github.com/TheBeastLT/torrentio-scraper).
+Tento neoficiálny doplnok pre [Stremio](https://www.stremio.com/) umožňuje vyhľadávať a streamovať filmy a seriály z populárneho slovenského torrent trackera **[SKTorrent.eu](https://sktorrent.eu/torrent/index.php)** priamo cez Stremio rozhranie. Inšpiráciou pre vytvorenie tohto doplnku bol populárny Stremio doplnok [Torrentio](https://github.com/TheBeastLT/torrentio-scraper).
 
 ## 🔧 Funkcie
 
