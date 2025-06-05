@@ -1,6 +1,6 @@
 # Sktorrent-Stremio-addon
 
-Tento neoficiálny doplnok pre [Stremio](https://www.stremio.com/) umožňuje vyhľadávať a streamovať filmy a seriály z populárneho slovenského torrent trackera **SKTorrent.eu** priamo cez Stremio rozhranie.
+Tento neoficiálny doplnok pre [Stremio](https://www.stremio.com/) umožňuje vyhľadávať a streamovať filmy a seriály z populárneho slovenského torrent trackera **SKTorrent.eu** priamo cez Stremio rozhranie. Inšpiráciou pre vytvorenie tohto doplnku bol populárny Stremio doplnok [Torrentio](https://github.com/TheBeastLT/torrentio-scraper).
 
 ## 🔧 Funkcie
 
@@ -44,7 +44,7 @@ http://localhost:7000/manifest.json
 - Vlož adresu: http://localhost:7000/manifest.json
 
   Alternatívny postup inštalácie doplnku do aplikácie Stremio:
-- V aplikácii Stremio klikni na "Addons" a potom na tlačidlo "Add addon" alebo jednoducho zadaj nasledovný odkaz do vyhľadávacieh poľa zadaj nasleodovný URL a nainštaluj doplnok: http://127.0.0.1:7000/manifest.json
+- V aplikácii Stremio klikni na "Addons" a potom na tlačidlo "Add addon" alebo jednoducho zadaj nasledovný odkaz do vyhľadávacieh poľa a nainštaluj doplnok: http://127.0.0.1:7000/manifest.json
 
 ## 📁 Konfigurácia
 
