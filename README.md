@@ -58,3 +58,7 @@ const SKT_PASS = "tvoj_pass_hash";
 Používanie tohto doplnku pre prístup k chránenému obsahu je **na vlastné riziko**.
 Autor nenesie **žiadnu zodpovednosť** za prípadné porušenie autorských práv alebo právnych predpisov vyplývajúcich z používania tohto nástroja.
 Tento projekt **nepropaguje pirátstvo**, ale demonštruje technické možnosti rozšírenia Stremio platformy.
+
+## 🛠 Licencia
+
+MIT License (voľné použitie, bez záruky)
