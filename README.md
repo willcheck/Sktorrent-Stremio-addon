@@ -26,7 +26,7 @@ npm init -y
 npm install axios cheerio stremio-addon-sdk axios-cookiejar-support tough-cookie bncode entities parse-torrent-file
 ```
 
-Poznámka: Je odporúčané používať Node.js verziu >=18, testované s Node.js v20.09 LTS
+Poznámka: Je odporúčané používať Node.js verziu >=18, testované s [Node.js v20.09 LTS](https://nodejs.org/en/blog/release/v20.9.0)
 
 ### 3. Spustenie lokálneho servera (v príkazovom riadku sa potom zobrazujú debug správy)
 ```bash
@@ -48,7 +48,7 @@ http://localhost:7000/manifest.json
 
 ## 📁 Konfigurácia
 
-Autentifikácia na stránke SKTorrent.eu je pre lokálne testovanie doplnku momentálne riešená pevne zadanými cookies (uid, pass) v zdrojovom kóde. Každý používateľ by si mal upraviť svoj vlastný login údaj pre korektné fungovanie:
+Autentifikácia na stránke [SKTorrent.eu](https://sktorrent.eu/torrent/index.php) je pre lokálne testovanie doplnku momentálne riešená pevne zadanými cookies (uid, pass) v zdrojovom kóde. Každý používateľ by si mal upraviť svoj vlastný login údaj pre korektné fungovanie:
 ```js
 const SKT_UID = "tvoj_uid";
 const SKT_PASS = "tvoj_pass_hash";
