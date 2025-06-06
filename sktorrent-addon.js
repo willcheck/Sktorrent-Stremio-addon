@@ -175,51 +175,51 @@ async function toStream(t) {
 }
 
 builder.defineStreamHandler(async ({ type, id }) => {
-	console.log(`\n====== 🎮 RAW Požiadavka: type='${type}', id='${id}' ======`);
-	const [imdbId, sRaw, eRaw] = id.split(":");
-	const season = sRaw ? parseInt(sRaw) : undefined;
-	const episode = eRaw ? parseInt(eRaw) : undefined;
+    console.log(`\n====== 🎮 Požiadavka: type='${type}', id='${id}' ======`);
 
-	console.log(`====== 🎮 STREAM Požiadavka pre typ='${type}' imdbId='${imdbId}' season='${season}' episode='${episode}' ======`);
+    const [imdbId, sRaw, eRaw] = id.split(":");
+    const season = sRaw ? parseInt(sRaw) : undefined;
+    const episode = eRaw ? parseInt(eRaw) : undefined;
 
-	const titles = await getTitleFromIMDb(imdbId);
-	if (!titles) return { streams: [] };
+    const titles = await getTitleFromIMDb(imdbId);
+    if (!titles) return { streams: [] };
 
-	const { title, originalTitle } = titles;
-	const queries = new Set();
-	const baseTitles = [title, originalTitle].map(t => t.replace(/\(.*?\)/g, '').replace(/TV (Mini )?Series/gi, '').trim());
+    const { title, originalTitle } = titles;
+    const queries = new Set();
+    const baseTitles = [title, originalTitle].map(t => t.replace(/\(.*?\)/g, '').replace(/TV (Mini )?Series/gi, '').trim());
 
-	baseTitles.forEach(base => {
-		const noDia = removeDiacritics(base);
-		const short = shortenTitle(noDia);
+    baseTitles.forEach(base => {
+        const noDia = removeDiacritics(base);
+        const short = shortenTitle(noDia);
+        const variants = [base, noDia, short];
 
-		if (type === 'series' && season && episode) {
-			const epTag = ` S${String(season).padStart(2, '0')}E${String(episode).padStart(2, '0')}`;
-			[base, noDia, short].forEach(b => {
-				queries.add(b + epTag);
-				queries.add((b + epTag).replace(/[\':]/g, ''));
-				queries.add((b + epTag).replace(/[\':]/g, '').replace(/\s+/g, '.'));
-			});
-		} else {
-			[base, noDia, short].forEach(b => {
-				queries.add(b);
-				queries.add(b.replace(/[\':]/g, ''));
-				queries.add(b.replace(/[\':]/g, '').replace(/\s+/g, '.'));
-			});
-		}
-	});
+        if (type === 'series' && season && episode) {
+            const epTag = ` S${String(season).padStart(2, '0')}E${String(episode).padStart(2, '0')}`;
+            variants.forEach(b => queries.add((b + epTag).replace(/[\':]/g, '').replace(/\s+/g, '.')));
+        } else {
+            variants.forEach(b => queries.add(b.replace(/[\':]/g, '').replace(/\s+/g, '.')));
+        }
+    });
 
-	let torrents = [];
-	let attempt = 1;
-	for (const q of queries) {
-		console.log(`[DEBUG] 🔍 Pokus ${attempt++}: Hľadám '${q}'`);
-		torrents = await searchTorrents(q);
-		if (torrents.length > 0) break;
-	}
+    let torrents = [];
+    for (const q of queries) {
+        torrents = await searchTorrents(q);
+        if (torrents.length > 0) break;
+    }
 
-	const streams = (await Promise.all(torrents.map(toStream))).filter(Boolean);
-	console.log(`[INFO] ✅ Odosielam ${streams.length} streamov do Stremio`);
-	return { streams };
+    const streams = [];
+    for (const t of torrents) {
+        const stream = await toStream(t);
+        if (stream) {
+            console.log(`[DEBUG] ✅ Stream infoHash: ${stream.infoHash}`);
+            streams.push(stream);
+        } else {
+            console.log(`[DEBUG] ❌ Stream preskočený`);
+        }
+    }
+
+    console.log(`[INFO] ✅ Odosielam ${streams.length} streamov do Stremio`);
+    return { streams };
 });
 
 builder.defineCatalogHandler(({ type, id }) => {
