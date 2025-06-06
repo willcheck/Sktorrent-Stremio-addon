@@ -229,9 +229,9 @@ builder.defineStreamHandler(async ({ type, id }) => {
     return { streams };
 });
 
-builder.defineCatalogHandler(({ type, id }) => {
-    console.error(`[DEBUG] 📚 Katalóg požiadavka pre typ='${type}' id='${id}'`);
-    return { metas: [] }; // aktivuje prepojenie
+builder.defineCatalogHandler(async ({ type, id }) => {
+    console.log(`[DEBUG] 📚 Katalóg požiadavka pre typ='${type}' id='${id}'`);
+    return { metas: [] };
 });
 
 console.error("\ud83d\udccc Manifest debug výpis:", builder.getInterface().manifest);
