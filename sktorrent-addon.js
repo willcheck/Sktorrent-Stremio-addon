@@ -122,12 +122,30 @@ async function getInfoHashFromTorrent(url) {
                 Referer: BASE_URL
             }
         });
+
+        const contentType = res.headers["content-type"];
+        console.log(`[DEBUG] 📄 Content-Type: ${contentType}`);
+        console.log(`[DEBUG] 📦 Dĺžka torrentu (bytes): ${res.data.byteLength}`);
+        console.log(`[DEBUG] 🧬 Prvých 64 bajtov torrentu (hex): ${Buffer.from(res.data).toString("hex").slice(0, 128)}`);
+
+        if (!contentType || !contentType.includes("application/x-bittorrent")) {
+            console.error("[ERROR] ⚠️ Vrátený typ nie je .torrent súbor, pravdepodobne HTML chyba alebo redirect.");
+            return null;
+        }
+
         const torrent = bencode.decode(res.data);
+        if (!torrent.info) {
+            console.error("[ERROR] ❗️ .torrent neobsahuje info sekciu.");
+            return null;
+        }
+
         const info = bencode.encode(torrent.info);
         const infoHash = crypto.createHash("sha1").update(info).digest("hex");
+
+        console.log(`[DEBUG] ✅ infoHash: ${infoHash}`);
         return infoHash;
     } catch (err) {
-        console.error("[ERROR] ⛔️ Chyba pri spracovaní .torrent:", err.message);
+        console.error("[ERROR] ⛔️ Chyba pri spracovaní .torrent súboru:", err.message);
         return null;
     }
 }
