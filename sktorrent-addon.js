@@ -6,8 +6,15 @@ const cheerio = require("cheerio");
 const bencode = require("bncode");
 const crypto = require("crypto");
 
-const SKT_UID = "tvoj_uid";
-const SKT_PASS = "tvoj_pass_hash";
+const SKT_UID = process.env.SKT_UID || "";   // pripravené pre nasadenie na server Vercel
+const SKT_PASS = process.env.SKT_PASS || ""; // pripravené pre nasadenie na server Vercel
+
+// ALEBO
+
+// const SKT_UID = "tvoj_uid";  // zadaj natvrdo pre lokálne testovanie
+// const SKT_PASS = "tvoj_pass_hash";  // zadaj natvrdo pre lokálne testovanie
+
+
 const BASE_URL = "https://sktorrent.eu";
 const SEARCH_URL = `${BASE_URL}/torrent/torrents_v2.php`;
 
