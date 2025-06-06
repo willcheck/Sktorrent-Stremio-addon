@@ -6,8 +6,15 @@ const cheerio = require("cheerio");
 const bencode = require("bncode");
 const crypto = require("crypto");
 
-const SKT_UID = "tvoj_uid";
-const SKT_PASS = "tvoj_pass_hash";
+const SKT_UID = process.env.SKT_UID || "";   // pripravené pre nasadenie na server Vercel
+const SKT_PASS = process.env.SKT_PASS || ""; // pripravené pre nasadenie na server Vercel
+
+// ALEBO
+
+// const SKT_UID = "tvoj_uid";  // zadaj natvrdo pre lokálne testovanie
+// const SKT_PASS = "tvoj_pass_hash";  // zadaj natvrdo pre lokálne testovanie
+
+
 const BASE_URL = "https://sktorrent.eu";
 const SEARCH_URL = `${BASE_URL}/torrent/torrents_v2.php`;
 
@@ -115,12 +122,34 @@ async function getInfoHashFromTorrent(url) {
                 Referer: BASE_URL
             }
         });
+
+        const contentType = res.headers["content-type"];
+        const byteLength = res.data.byteLength;
+        const first64BytesHex = Buffer.from(res.data).toString("hex").slice(0, 128);
+
+        console.log(`📄 Content-Type: ${contentType}`);
+        console.log(`📦 Dĺžka torrentu (bytes): ${byteLength}`);
+        console.log(`🧬 Prvých 64 bajtov torrentu (hex): ${first64BytesHex}`);
+
+        if (!contentType || !contentType.includes("application/x-bittorrent")) {
+            console.error("[ERROR] ⚠️ Vrátený typ nie je .torrent súbor, pravdepodobne HTML chyba alebo redirect.");
+            return null;
+        }
+
         const torrent = bencode.decode(res.data);
+
+        if (!torrent.info) {
+            console.error("[ERROR] ❗️ .torrent neobsahuje info sekciu.");
+            return null;
+        }
+
         const info = bencode.encode(torrent.info);
         const infoHash = crypto.createHash("sha1").update(info).digest("hex");
+
+        console.log(`✅ infoHash: ${infoHash}`);
         return infoHash;
     } catch (err) {
-        console.error("[ERROR] ⛔️ Chyba pri spracovaní .torrent:", err.message);
+        console.error("[ERROR] ⛔️ Chyba pri spracovaní .torrent súboru:", err.message);
         return null;
     }
 }
@@ -207,4 +236,3 @@ builder.defineCatalogHandler(({ type, id }) => {
 
 console.log("\ud83d\udccc Manifest debug výpis:", builder.getInterface().manifest);
 serveHTTP(builder.getInterface(), { port: 7000 });
-console.log("\ud83d\ude80 SKTorrent addon beží na http://localhost:7000/manifest.json");
