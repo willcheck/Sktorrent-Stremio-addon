@@ -6,14 +6,8 @@ const cheerio = require("cheerio");
 const bencode = require("bncode");
 const crypto = require("crypto");
 
-const SKT_UID = process.env.SKT_UID || "";   // pripravené pre nasadenie na server Vercel
-const SKT_PASS = process.env.SKT_PASS || ""; // pripravené pre nasadenie na server Vercel
-
-// ALEBO
-
-// const SKT_UID = "tvoj_uid";  // zadaj natvrdo pre lokálne testovanie
-// const SKT_PASS = "tvoj_pass_hash";  // zadaj natvrdo pre lokálne testovanie
-
+const SKT_UID = process.env.SKT_UID || "";
+const SKT_PASS = process.env.SKT_PASS || "";
 
 const BASE_URL = "https://sktorrent.eu";
 const SEARCH_URL = `${BASE_URL}/torrent/torrents_v2.php`;
@@ -65,8 +59,8 @@ async function getTitleFromIMDb(imdbId) {
             const json = JSON.parse(ldJson);
             if (json && json.name) originalTitle = decode(json.name.trim());
         }
-        console.error(`[DEBUG] 🌝 Lokalizovaný názov: ${title}`);
-        console.error(`[DEBUG] 🇳️ Originálny názov: ${originalTitle}`);
+        console.log(`[DEBUG] 🌝 Lokalizovaný názov: ${title}`);
+        console.log(`[DEBUG] 🇳️ Originálny názov: ${originalTitle}`);
         return { title, originalTitle };
     } catch (err) {
         console.error("[ERROR] IMDb scraping zlyhal:", err.message);
@@ -75,7 +69,7 @@ async function getTitleFromIMDb(imdbId) {
 }
 
 async function searchTorrents(query) {
-    console.error(`[INFO] 🔎 Hľadám '${query}' na SKTorrent...`);
+    console.log(`[INFO] 🔎 Hľadám '${query}' na SKTorrent...`);
     try {
         const session = axios.create({ headers: { Cookie: `uid=${SKT_UID}; pass=${SKT_PASS}` } });
         const res = await session.get(SEARCH_URL, { params: { search: query, category: 0 } });
@@ -105,7 +99,7 @@ async function searchTorrents(query) {
                 downloadUrl: `${BASE_URL}/torrent/download.php?id=${torrentId}`
             });
         });
-        console.error(`[INFO] 📦 Nájdených torrentov: ${results.length}`);
+        console.log(`[INFO] 📦 Nájdených torrentov: ${results.length}`);
         return results;
     } catch (err) {
         console.error("[ERROR] Vyhľadávanie zlyhalo:", err.message);
@@ -137,7 +131,6 @@ async function getInfoHashFromTorrent(url) {
         }
 
         const torrent = bencode.decode(res.data);
-
         if (!torrent.info) {
             console.error("[ERROR] ❗️ .torrent neobsahuje info sekciu.");
             return null;
@@ -145,7 +138,6 @@ async function getInfoHashFromTorrent(url) {
 
         const info = bencode.encode(torrent.info);
         const infoHash = crypto.createHash("sha1").update(info).digest("hex");
-
         console.error(`✅ infoHash: ${infoHash}`);
         return infoHash;
     } catch (err) {
@@ -156,7 +148,7 @@ async function getInfoHashFromTorrent(url) {
 
 async function toStream(t) {
     if (isMultiSeason(t.name)) {
-        console.error(`[DEBUG] ❌ Preskakujem multi-season balík: '${t.name}'`);
+        console.log(`[DEBUG] ❌ Preskakujem multi-season balík: '${t.name}'`);
         return null;
     }
     const langMatches = t.name.match(/\b([A-Z]{2})\b/g) || [];
@@ -181,13 +173,11 @@ async function toStream(t) {
 }
 
 builder.defineStreamHandler(async ({ type, id }) => {
-    console.error(`\n====== 🎮 RAW Požiadavka: type='${type}', id='${id}' ======`);
+    console.log(`\n====== 🎮 RAW Požiadavka: type='${type}', id='${id}' ======`);
 
-    const [imdbId, sRaw, eRaw] = id.split(":");
+    const [imdbId, sRaw, eRaw] = id.split(":" );
     const season = sRaw ? parseInt(sRaw) : undefined;
     const episode = eRaw ? parseInt(eRaw) : undefined;
-
-    console.error(`====== 🎮 STREAM Požiadavka pre typ='${type}' imdbId='${imdbId}' season='${season}' episode='${episode}' ======`);
 
     const titles = await getTitleFromIMDb(imdbId);
     if (!titles) return { streams: [] };
@@ -217,15 +207,21 @@ builder.defineStreamHandler(async ({ type, id }) => {
     });
 
     let torrents = [];
-    let attempt = 1;
     for (const q of queries) {
-        console.error(`[DEBUG] 🔍 Pokus ${attempt++}: Hľadám '${q}'`);
         torrents = await searchTorrents(q);
         if (torrents.length > 0) break;
     }
 
-    const streams = (await Promise.all(torrents.map(toStream))).filter(Boolean);
-    console.error(`[INFO] ✅ Odosielam ${streams.length} streamov do Stremio`);
+    const streams = [];
+    for (const t of torrents) {
+        const stream = await toStream(t);
+        if (stream) {
+            streams.push(stream);
+        }
+    }
+
+    console.log(`[INFO] ✅ Odosielam ${streams.length} streamov do Stremio`);
+    console.log(JSON.stringify(streams, null, 2)); // 💡 výpis streamov do konzoly pre debug
     return { streams };
 });
 
@@ -234,5 +230,5 @@ builder.defineCatalogHandler(async ({ type, id }) => {
     return { metas: [] };
 });
 
-console.error("\ud83d\udccc Manifest debug výpis:", builder.getInterface().manifest);
+console.log("📌 Manifest debug výpis:", builder.getInterface().manifest);
 serveHTTP(builder.getInterface(), { port: 7000 });
