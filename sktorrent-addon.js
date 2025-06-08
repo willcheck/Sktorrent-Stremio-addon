@@ -6,6 +6,38 @@ const cheerio = require("cheerio");
 const bencode = require("bncode");
 const crypto = require("crypto");
 
+function generateQueries(title, localizedTitle, season, episode) {
+    const queries = new Set();
+    const s = String(season).padStart(2, '0');
+    const e = String(episode).padStart(2, '0');
+
+    const formats = [
+        `${title} S${s}E${e}`,
+        `${title} ${season}x${episode}`,
+        `${title} Season ${season} Episode ${episode}`,
+        `${title} S${s}`,
+        `${title} Season ${season}`,
+        `${title}`,
+    ];
+
+    formats.forEach(q => queries.add(q));
+
+    if (localizedTitle && localizedTitle.toLowerCase() !== title.toLowerCase()) {
+        const localizedFormats = [
+            `${localizedTitle} S${s}E${e}`,
+            `${localizedTitle} ${season}x${episode}`,
+            `${localizedTitle} Season ${season} Episode ${episode}`,
+            `${localizedTitle} S${s}`,
+            `${localizedTitle} Season ${season}`,
+            `${localizedTitle}`,
+        ];
+        localizedFormats.forEach(q => queries.add(q));
+    }
+
+    return Array.from(queries);
+}
+
+
 const SKT_UID = process.env.SKT_UID || "9169";
 const SKT_PASS = process.env.SKT_PASS || "4394204647bafe4871e624cd93270ca8";
 
@@ -195,28 +227,8 @@ builder.defineStreamHandler(async ({ type, id }) => {
     if (!titles) return { streams: [] };
 
     const { title, originalTitle } = titles;
-    const queries = new Set();
-    const baseTitles = [title, originalTitle].map(t => t.replace(/\(.*?\)/g, '').replace(/TV (Mini )?Series/gi, '').trim());
 
-    baseTitles.forEach(base => {
-        const noDia = removeDiacritics(base);
-        const short = shortenTitle(noDia);
-
-        if (type === 'series' && season && episode) {
-            const epTag = ` S${String(season).padStart(2, '0')}E${String(episode).padStart(2, '0')}`;
-            [base, noDia, short].forEach(b => {
-                queries.add(b + epTag);
-                queries.add((b + epTag).replace(/[\':]/g, ''));
-                queries.add((b + epTag).replace(/[\':]/g, '').replace(/\s+/g, '.'));
-            });
-        } else {
-            [base, noDia, short].forEach(b => {
-                queries.add(b);
-                queries.add(b.replace(/[\':]/g, ''));
-                queries.add(b.replace(/[\':]/g, '').replace(/\s+/g, '.'));
-            });
-        }
-    });
+    const queries = generateQueries(originalTitle, title, season, episode); // 👈 používaš novú funkciu
 
     let torrents = [];
     let attempt = 1;
@@ -230,6 +242,7 @@ builder.defineStreamHandler(async ({ type, id }) => {
     console.log(`[INFO] ✅ Odosielam ${streams.length} streamov do Stremio`);
     return { streams };
 });
+
 
 builder.defineCatalogHandler(async ({ type, id }) => {
     console.log(`[DEBUG] 📚 Katalóg požiadavka pre typ='${type}' id='${id}'`);
