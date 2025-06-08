@@ -71,7 +71,14 @@ async function getTitleFromIMDb(imdbId) {
 async function searchTorrents(query) {
     console.log(`[INFO] 🔎 Hľadám '${query}' na SKTorrent...`);
     try {
-        const session = axios.create({ headers: { Cookie: `uid=${SKT_UID}; pass=${SKT_PASS}` } });
+        const session = axios.create({
+  headers: {
+    Cookie: `uid=${SKT_UID}; pass=${SKT_PASS}`,
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+    Referer: BASE_URL
+  }
+});
+
         const res = await session.get(SEARCH_URL, { params: { search: query, category: 0 } });
         const $ = cheerio.load(res.data);
         const posters = $('a[href^="details.php"] img');
