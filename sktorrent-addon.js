@@ -127,6 +127,17 @@ async function getInfoHashFromTorrent(url) {
             }
         });
 
+        // Skontroluj, či server vrátil naozaj .torrent súbor
+const contentType = res.headers["content-type"];
+if (!contentType || !contentType.includes("application/x-bittorrent") || res.data[0] !== 0x64) {
+    console.error("[ERROR] ⛔️ Server nevrátil .torrent súbor");
+
+    // Zobraz náhľad začiatku odpovede ako text
+    const textPreview = res.data.toString("utf8", 0, 300);
+    console.log("[DEBUG] 🔍 HTML odpoveď alebo error:", textPreview);
+    return null;
+}
+
         const contentType = res.headers['content-type'];
         if (!contentType || !contentType.includes('application/x-bittorrent')) {
             console.error("[ERROR] ⛔️ Server nevrátil .torrent súbor");
