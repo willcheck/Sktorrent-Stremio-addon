@@ -6,44 +6,6 @@ const cheerio = require("cheerio");
 const bencode = require("bncode");
 const crypto = require("crypto");
 
-function generateQueries(original, localized, season, episode) {
-    const variants = new Set();
-
-    const clean = t => t
-        .replace(/\(.*?\)/g, '') // odstráni roky a zátvorky
-        .replace(/TV (Mini )?Series/gi, '')
-        .trim();
-
-    const noDia = str => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    const shorten = str => str.replace(/[^a-zA-Z0-9 ]/g, '').trim();
-
-    const orig = clean(original);
-    const loc = clean(localized);
-
-    const bases = [
-        orig,
-        loc,
-        `${loc} ${orig}`, // SK + EN
-        `${orig} ${loc}`  // EN + SK
-    ];
-
-    const epTag = season && episode ? `S${String(season).padStart(2, '0')}E${String(episode).padStart(2, '0')}` : '';
-
-    for (const base of bases) {
-        const baseClean = shorten(noDia(base));
-        const withTag = epTag ? `${base} ${epTag}` : base;
-
-        variants.add(withTag);
-        variants.add(withTag.replace(/\s+/g, '.'));         // Prehistoric.Planet.S01E02
-        variants.add(withTag.replace(/[\s\.]+/g, ''));       // PrehistoricPlanetS01E02
-        variants.add(baseClean + epTag);                    // PrehistorickaplanetaS01E02
-    }
-
-    return Array.from(variants);
-}
-
-
-
 const SKT_UID = process.env.SKT_UID || "9169";
 const SKT_PASS = process.env.SKT_PASS || "4394204647bafe4871e624cd93270ca8";
 
@@ -220,27 +182,6 @@ async function toStream(t) {
     };
 }
 
-const getCzSkTitle = async (imdbId) => {
-    try {
-        const url = `https://www.csfd.cz/hledat/?q=${imdbId}`;
-        const { data } = await axios.get(url, {
-            headers: { 'User-Agent': 'Mozilla/5.0' }
-        });
-
-        const $ = cheerio.load(data);
-        const title = $('.film .content h1 a').first().text().trim();
-        if (title) {
-            console.log(`[DEBUG] 🇨🇿 CZ/SK názov z ČSFD: ${title}`);
-        } else {
-            console.log(`[DEBUG] ❌ Nenašiel sa CZ/SK názov na ČSFD`);
-        }
-        return title || null;
-    } catch (err) {
-        console.log(`[ERROR] ❌ Chyba pri načítaní CZ/SK názvu z ČSFD: ${err.message}`);
-        return null;
-    }
-};
-
 builder.defineStreamHandler(async ({ type, id }) => {
     console.log(`\n====== 🎮 RAW Požiadavka: type='${type}', id='${id}' ======`);
 
@@ -254,8 +195,28 @@ builder.defineStreamHandler(async ({ type, id }) => {
     if (!titles) return { streams: [] };
 
     const { title, originalTitle } = titles;
+    const queries = new Set();
+    const baseTitles = [title, originalTitle].map(t => t.replace(/\(.*?\)/g, '').replace(/TV (Mini )?Series/gi, '').trim());
 
-    const queries = generateQueries(originalTitle, title, season, episode); // 👈 používaš novú funkciu
+    baseTitles.forEach(base => {
+        const noDia = removeDiacritics(base);
+        const short = shortenTitle(noDia);
+
+        if (type === 'series' && season && episode) {
+            const epTag = ` S${String(season).padStart(2, '0')}E${String(episode).padStart(2, '0')}`;
+            [base, noDia, short].forEach(b => {
+                queries.add(b + epTag);
+                queries.add((b + epTag).replace(/[\':]/g, ''));
+                queries.add((b + epTag).replace(/[\':]/g, '').replace(/\s+/g, '.'));
+            });
+        } else {
+            [base, noDia, short].forEach(b => {
+                queries.add(b);
+                queries.add(b.replace(/[\':]/g, ''));
+                queries.add(b.replace(/[\':]/g, '').replace(/\s+/g, '.'));
+            });
+        }
+    });
 
     let torrents = [];
     let attempt = 1;
@@ -269,7 +230,6 @@ builder.defineStreamHandler(async ({ type, id }) => {
     console.log(`[INFO] ✅ Odosielam ${streams.length} streamov do Stremio`);
     return { streams };
 });
-
 
 builder.defineCatalogHandler(async ({ type, id }) => {
     console.log(`[DEBUG] 📚 Katalóg požiadavka pre typ='${type}' id='${id}'`);
