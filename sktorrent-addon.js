@@ -6,48 +6,56 @@ const cheerio = require("cheerio");
 const bencode = require("bncode");
 const crypto = require("crypto");
 
-function generateQueries(original, localized, season, episode) {
+function generateQueries(original, localized, czsk, season, episode) {
   const clean = str => 
     str
-      .replace(/\(.*?\)/g, '')         // odstráni zátvorky aj obsah v nich (napr. roky)
-      .replace(/TV (Mini )?Series/gi, '') // odstráni "TV Series"
+      .replace(/\(.*?\)/g, '')
+      .replace(/TV (Mini )?Series/gi, '')
       .trim()
       .toLowerCase();
 
   const noDia = str => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
   const toKebab = str => noDia(str).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 
-  const seasonEpisode = season && episode ? `s${String(season).padStart(2, '0')}e${String(episode).padStart(2, '0')}` : '';
+  const seasonEpisode = season && episode
+    ? [`s${String(season).padStart(2, '0')}e${String(episode).padStart(2, '0')}`,
+       `S${String(season).padStart(2, '0')}E${String(episode).padStart(2, '0')}`,
+       `${String(season).padStart(2, '2')}x${String(episode).padStart(2, '0')}`]
+    : [];
 
-  const origClean = clean(original);
-  const locClean = clean(localized);
-
-  const origKebab = toKebab(origClean);
-  const locKebab = toKebab(locClean);
+  const allTitles = [original, localized, czsk].filter(Boolean).map(clean);
+  const kebabs = allTitles.map(toKebab);
+  const joined = kebabs.flatMap(k1 => kebabs.map(k2 => `${k1}-${k2}`)).filter((v, i, a) => i === a.indexOf(v));
 
   const queries = new Set();
 
-  // jednoduché varianty
-  if(seasonEpisode) {
-    queries.add(`${origKebab}-${seasonEpisode}`);
-    queries.add(`${locKebab}-${seasonEpisode}`);
-    queries.add(`${locKebab}-${origKebab}-${seasonEpisode}`);
-    queries.add(`${origKebab}-${locKebab}-${seasonEpisode}`);
-  } else {
-    queries.add(origKebab);
-    queries.add(locKebab);
-    queries.add(`${locKebab}-${origKebab}`);
-    queries.add(`${origKebab}-${locKebab}`);
-  }
+  if (seasonEpisode.length) {
+    kebabs.forEach(k => {
+      seasonEpisode.forEach(se => {
+        queries.add(`${k}-${se}`);
+        queries.add(`${k}${se}`);
+        queries.add(`${k}-${se.toUpperCase()}`);
+        queries.add(`-${k}-${se}`);
+        queries.add(`${se}-${k}`);
+      });
+    });
 
-  // aj bez pomlčiek, spojene
-  if(seasonEpisode) {
-    queries.add(`${locKebab.replace(/-/g,'')}${origKebab.replace(/-/g,'')}${seasonEpisode}`);
-    queries.add(`${origKebab.replace(/-/g,'')}${locKebab.replace(/-/g,'')}${seasonEpisode}`);
+    joined.forEach(j => {
+      seasonEpisode.forEach(se => {
+        queries.add(`${j}-${se}`);
+        queries.add(`${j}${se}`);
+        queries.add(`-${j}-${se}`);
+      });
+    });
+  } else {
+    kebabs.forEach(k => queries.add(k));
+    joined.forEach(j => queries.add(j));
+    kebabs.forEach(k => queries.add(`-${k}`));
   }
 
   return Array.from(queries);
 }
+
 
 
 
