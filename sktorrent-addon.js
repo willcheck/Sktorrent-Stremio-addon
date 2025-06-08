@@ -201,10 +201,11 @@ builder.defineStreamHandler(async ({ type, id }) => {
     return { streams };
 });
 
-builder.defineCatalogHandler(({ type, id }) => {
+builder.defineCatalogHandler(async ({ type, id }) => {
     console.log(`[DEBUG] 📚 Katalóg požiadavka pre typ='${type}' id='${id}'`);
     return { metas: [] }; // aktivuje prepojenie
 });
+
 
 console.log("\ud83d\udccc Manifest debug výpis:", builder.getInterface().manifest);
 serveHTTP(builder.getInterface(), { port: 7000 });
