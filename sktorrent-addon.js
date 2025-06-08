@@ -6,61 +6,55 @@ const cheerio = require("cheerio");
 const bencode = require("bncode");
 const crypto = require("crypto");
 
-function generateQueries(original, localized, czsk, season, episode) {
+function generateQueries(original, localized, season, episode) {
     const variants = new Set();
 
     const clean = t => t
-        ? t.replace(/\(.*?\)/g, '') // odstráni roky a zátvorky
-           .replace(/TV (Mini )?Series/gi, '')
-           .replace(/^\-+|\-+$/g, '') // odstráni pomlčky na začiatku/konci
-           .trim()
-        : '';
+        .replace(/\(.*?\)/g, '') // odstráni roky a zátvorky
+        .replace(/TV (Mini )?Series/gi, '')
+        .trim();
 
     const noDia = str => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     const shorten = str => str.replace(/[^a-zA-Z0-9 ]/g, '').trim();
 
     const orig = clean(original);
     const loc = clean(localized);
-    const czskClean = clean(czsk);
-
-    const basesRaw = [orig, loc, czskClean].filter(Boolean);
-
-    // Vytvoríme všetky kombinácie dvojíc + jednotlivé názvy
-    const bases = new Set();
-
-    for (const base of basesRaw) bases.add(base);
-    if (orig && loc) {
-        bases.add(`${loc} ${orig}`); // SK + EN
-        bases.add(`${orig} ${loc}`); // EN + SK
-    }
-    if (orig && czskClean) {
-        bases.add(`${czskClean} ${orig}`); // CZ/SK + EN
-        bases.add(`${orig} ${czskClean}`); // EN + CZ/SK
-    }
-    if (loc && czskClean) {
-        bases.add(`${czskClean} ${loc}`); // CZ/SK + SK
-        bases.add(`${loc} ${czskClean}`); // SK + CZ/SK
-    }
 
     const epTag = season && episode ? `S${String(season).padStart(2, '0')}E${String(episode).padStart(2, '0')}` : '';
 
-    for (const base of bases) {
-        const baseNoDia = noDia(base);
-        const baseCleaned = shorten(baseNoDia);
-        const baseHyphen = baseNoDia.replace(/\s+/g, '-');      // s pomlčkami
-        const baseDot = baseNoDia.replace(/\s+/g, '.');         // s bodkami
+    // klasické varianty (medzery a bodky)
+    const bases = [
+        orig,
+        loc,
+        `${loc} ${orig}`, // SK + EN
+        `${orig} ${loc}`  // EN + SK
+    ];
 
+    for (const base of bases) {
+        const baseClean = shorten(noDia(base));
         const withTag = epTag ? `${base} ${epTag}` : base;
-        const withTagHyphen = epTag ? `${baseHyphen}-${epTag}` : baseHyphen;
-        const withTagDot = epTag ? `${baseDot}.${epTag}` : baseDot;
-        const withTagClean = epTag ? `${baseCleaned}${epTag}` : baseCleaned;
 
         variants.add(withTag);
-        variants.add(withTag.replace(/\s+/g, '.'));
-        variants.add(withTag.replace(/[\s\.]+/g, ''));
-        variants.add(withTagHyphen);
-        variants.add(withTagDot);
-        variants.add(withTagClean);
+        variants.add(withTag.replace(/\s+/g, '.'));         // napr. Prehistoric.Planet.S01E02
+        variants.add(withTag.replace(/[\s\.]+/g, ''));       // napr. PrehistoricPlanetS01E02
+        variants.add(baseClean + epTag);                    // PrehistorickaplanetaS01E02
+    }
+
+    // ** NOVINKA: SK + EN názov spojený pomlčkami bez diakritiky v SK názve **
+    if (loc && orig) {
+        const locNoDia = noDia(loc).replace(/\s+/g, '-');
+        const origNoDia = noDia(orig).replace(/\s+/g, '-');
+
+        const combined1 = `${locNoDia}-${origNoDia}`;
+        const combined2 = `${origNoDia}-${locNoDia}`;
+
+        if (epTag) {
+            variants.add(`${combined1}-${epTag}`);
+            variants.add(`${combined2}-${epTag}`);
+        } else {
+            variants.add(combined1);
+            variants.add(combined2);
+        }
     }
 
     return Array.from(variants);
