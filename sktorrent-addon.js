@@ -7,7 +7,7 @@ const bencode = require("bncode");
 const crypto = require("crypto");
 
 const SKT_UID = process.env.SKT_UID || "willcheck";
-const SKT_PASS = process.env.SKT_PASS || "martin";
+const SKT_PASS = process.env.SKT_PASS || "6@LXvuK6FQ6XYBj";
 
 const BASE_URL = "https://sktorrent.eu";
 const SEARCH_URL = `${BASE_URL}/torrent/torrents_v2.php`;
