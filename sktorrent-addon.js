@@ -220,6 +220,27 @@ async function toStream(t) {
     };
 }
 
+const getCzSkTitle = async (imdbId) => {
+    try {
+        const url = `https://www.csfd.cz/hledat/?q=${imdbId}`;
+        const { data } = await axios.get(url, {
+            headers: { 'User-Agent': 'Mozilla/5.0' }
+        });
+
+        const $ = cheerio.load(data);
+        const title = $('.film .content h1 a').first().text().trim();
+        if (title) {
+            console.log(`[DEBUG] 🇨🇿 CZ/SK názov z ČSFD: ${title}`);
+        } else {
+            console.log(`[DEBUG] ❌ Nenašiel sa CZ/SK názov na ČSFD`);
+        }
+        return title || null;
+    } catch (err) {
+        console.log(`[ERROR] ❌ Chyba pri načítaní CZ/SK názvu z ČSFD: ${err.message}`);
+        return null;
+    }
+};
+
 builder.defineStreamHandler(async ({ type, id }) => {
     console.log(`\n====== 🎮 RAW Požiadavka: type='${type}', id='${id}' ======`);
 
