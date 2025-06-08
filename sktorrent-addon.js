@@ -6,8 +6,8 @@ const cheerio = require("cheerio");
 const bencode = require("bncode");
 const crypto = require("crypto");
 
-const SKT_UID = process.env.SKT_UID || "willcheck";
-const SKT_PASS = process.env.SKT_PASS || "6@LXvuK6FQ6XYBj";
+const SKT_UID = process.env.SKT_UID || "9169";
+const SKT_PASS = process.env.SKT_PASS || "4394204647bafe4871e624cd93270ca8";
 
 const BASE_URL = "https://sktorrent.eu";
 const SEARCH_URL = `${BASE_URL}/torrent/torrents_v2.php`;
