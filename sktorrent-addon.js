@@ -132,6 +132,8 @@ async function getInfoHashFromTorrent(url) {
             console.error("[ERROR] ⛔️ Server nevrátil .torrent súbor");
             return null;
         }
+        const textPreview = res.data.toString('utf8', 0, 200);
+console.log("[DEBUG] Raw response preview:", textPreview);
 
         const torrent = bencode.decode(res.data);
         const info = bencode.encode(torrent.info);
