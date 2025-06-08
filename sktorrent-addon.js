@@ -123,18 +123,18 @@ async function getInfoHashFromTorrent(url) {
             responseType: "arraybuffer",
             headers: {
                 Cookie: `uid=${SKT_UID}; pass=${SKT_PASS}`,
-                Referer: BASE_URL
+                Referer: BASE_URL,
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
             }
         });
 
-        // Skontroluj, či server vrátil naozaj .torrent súbor
         const contentType = res.headers["content-type"];
         if (!contentType || !contentType.includes("application/x-bittorrent") || res.data[0] !== 0x64) {
             console.error("[ERROR] ⛔️ Server nevrátil .torrent súbor");
 
-            // Zobraz náhľad začiatku odpovede ako text
-            const textPreview = res.data.toString("utf8", 0, 300);
-            console.log("[DEBUG] 🔍 HTML odpoveď alebo error:", textPreview);
+            // Skús zobraziť celú odpoveď ako text, aby sme videli čo sa vrátilo
+            const textPreview = res.data.toString("utf8", 0, 1000);
+            console.log("[DEBUG] 🔍 Odpoveď servera (prvých 1000 znakov):\n", textPreview);
             return null;
         }
 
@@ -147,6 +147,7 @@ async function getInfoHashFromTorrent(url) {
         return null;
     }
 }
+
 
 async function toStream(t) {
     if (isMultiSeason(t.name)) {
