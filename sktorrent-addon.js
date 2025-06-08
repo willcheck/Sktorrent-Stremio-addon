@@ -77,28 +77,38 @@ async function searchTorrents(query) {
         const posters = $('a[href^="details.php"] img');
         const results = [];
 
-        posters.each((i, img) => {
-            const parent = $(img).closest("a");
-            const outerTd = parent.closest("td");
-            const fullBlock = outerTd.text().replace(/\s+/g, ' ').trim();
-            const href = parent.attr("href") || "";
-            const tooltip = parent.attr("title") || "";
-            const torrentId = href.split("id=").pop();
-            const category = outerTd.find("b").first().text().trim();
-            const sizeMatch = fullBlock.match(/Velkost\s([^|]+)/i);
-            const seedMatch = fullBlock.match(/Odosielaju\s*:\s*(\d+)/i);
-            const size = sizeMatch ? sizeMatch[1].trim() : "?";
-            const seeds = seedMatch ? seedMatch[1] : "0";
-            if (!category.toLowerCase().includes("film") && !category.toLowerCase().includes("seri")) return;
-            results.push({
-                name: tooltip,
-                id: torrentId,
-                size,
-                seeds,
-                category,
-                downloadUrl: `${BASE_URL}/torrent/download.php?id=${torrentId}`
-            });
-        });
+posters.each((i, img) => {
+    const parent = $(img).closest("a");
+    const outerTd = parent.closest("td");
+    const fullBlock = outerTd.text().replace(/\s+/g, ' ').trim();
+
+    const href = parent.attr("href") || "";  // celý odkaz vrátane id, f, seed
+    const tooltip = parent.attr("title") || "";
+    const category = outerTd.find("b").first().text().trim();
+
+    const rawId = href.match(/id=([^&]+)/)?.[1];
+    const filename = href.match(/f=([^&]+)/)?.[1];
+    const seed = href.includes("seed=1") ? "&seed=1" : "";
+
+    const sizeMatch = fullBlock.match(/Velkost\s([^|]+)/i);
+    const seedMatch = fullBlock.match(/Odosielaju\s*:\s*(\d+)/i);
+    const size = sizeMatch ? sizeMatch[1].trim() : "?";
+    const seeds = seedMatch ? seedMatch[1] : "0";
+
+    if (!rawId || (!category.toLowerCase().includes("film") && !category.toLowerCase().includes("seri"))) return;
+
+    const downloadUrl = `${BASE_URL}/torrent/download.php?id=${rawId}${filename ? `&f=${filename}` : ''}${seed}`;
+
+    results.push({
+        name: tooltip,
+        id: rawId,
+        size,
+        seeds,
+        category,
+        downloadUrl
+    });
+});
+
         console.log(`[INFO] 📦 Nájdených torrentov: ${results.length}`);
         return results;
     } catch (err) {
