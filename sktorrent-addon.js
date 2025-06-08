@@ -7,58 +7,48 @@ const bencode = require("bncode");
 const crypto = require("crypto");
 
 function generateQueries(original, localized, season, episode) {
-    const variants = new Set();
+  const clean = str => 
+    str
+      .replace(/\(.*?\)/g, '')         // odstráni zátvorky aj obsah v nich (napr. roky)
+      .replace(/TV (Mini )?Series/gi, '') // odstráni "TV Series"
+      .trim()
+      .toLowerCase();
 
-    const clean = t => t
-        .replace(/\(.*?\)/g, '') // odstráni roky a zátvorky
-        .replace(/TV (Mini )?Series/gi, '')
-        .trim();
+  const noDia = str => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const toKebab = str => noDia(str).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 
-    const noDia = str => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    const shorten = str => str.replace(/[^a-zA-Z0-9 ]/g, '').trim();
+  const seasonEpisode = season && episode ? `s${String(season).padStart(2, '0')}e${String(episode).padStart(2, '0')}` : '';
 
-    const orig = clean(original);
-    const loc = clean(localized);
+  const origClean = clean(original);
+  const locClean = clean(localized);
 
-    const epTag = season && episode ? `S${String(season).padStart(2, '0')}E${String(episode).padStart(2, '0')}` : '';
+  const origKebab = toKebab(origClean);
+  const locKebab = toKebab(locClean);
 
-    // klasické varianty (medzery a bodky)
-    const bases = [
-        orig,
-        loc,
-        `${loc} ${orig}`, // SK + EN
-        `${orig} ${loc}`  // EN + SK
-    ];
+  const queries = new Set();
 
-    for (const base of bases) {
-        const baseClean = shorten(noDia(base));
-        const withTag = epTag ? `${base} ${epTag}` : base;
+  // jednoduché varianty
+  if(seasonEpisode) {
+    queries.add(`${origKebab}-${seasonEpisode}`);
+    queries.add(`${locKebab}-${seasonEpisode}`);
+    queries.add(`${locKebab}-${origKebab}-${seasonEpisode}`);
+    queries.add(`${origKebab}-${locKebab}-${seasonEpisode}`);
+  } else {
+    queries.add(origKebab);
+    queries.add(locKebab);
+    queries.add(`${locKebab}-${origKebab}`);
+    queries.add(`${origKebab}-${locKebab}`);
+  }
 
-        variants.add(withTag);
-        variants.add(withTag.replace(/\s+/g, '.'));         // napr. Prehistoric.Planet.S01E02
-        variants.add(withTag.replace(/[\s\.]+/g, ''));       // napr. PrehistoricPlanetS01E02
-        variants.add(baseClean + epTag);                    // PrehistorickaplanetaS01E02
-    }
+  // aj bez pomlčiek, spojene
+  if(seasonEpisode) {
+    queries.add(`${locKebab.replace(/-/g,'')}${origKebab.replace(/-/g,'')}${seasonEpisode}`);
+    queries.add(`${origKebab.replace(/-/g,'')}${locKebab.replace(/-/g,'')}${seasonEpisode}`);
+  }
 
-    // ** NOVINKA: SK + EN názov spojený pomlčkami bez diakritiky v SK názve **
-    if (loc && orig) {
-        const locNoDia = noDia(loc).replace(/\s+/g, '-');
-        const origNoDia = noDia(orig).replace(/\s+/g, '-');
-
-        const combined1 = `${locNoDia}-${origNoDia}`;
-        const combined2 = `${origNoDia}-${locNoDia}`;
-
-        if (epTag) {
-            variants.add(`${combined1}-${epTag}`);
-            variants.add(`${combined2}-${epTag}`);
-        } else {
-            variants.add(combined1);
-            variants.add(combined2);
-        }
-    }
-
-    return Array.from(variants);
+  return Array.from(queries);
 }
+
 
 
 const SKT_UID = process.env.SKT_UID || "9169";
