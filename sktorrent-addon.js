@@ -6,36 +6,42 @@ const cheerio = require("cheerio");
 const bencode = require("bncode");
 const crypto = require("crypto");
 
-function generateQueries(title, localizedTitle, season, episode) {
-    const queries = new Set();
-    const s = String(season).padStart(2, '0');
-    const e = String(episode).padStart(2, '0');
+function generateQueries(original, localized, season, episode) {
+    const variants = new Set();
 
-    const formats = [
-        `${title} S${s}E${e}`,
-        `${title} ${season}x${episode}`,
-        `${title} Season ${season} Episode ${episode}`,
-        `${title} S${s}`,
-        `${title} Season ${season}`,
-        `${title}`,
+    const clean = t => t
+        .replace(/\(.*?\)/g, '') // odstráni roky a zátvorky
+        .replace(/TV (Mini )?Series/gi, '')
+        .trim();
+
+    const noDia = str => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const shorten = str => str.replace(/[^a-zA-Z0-9 ]/g, '').trim();
+
+    const orig = clean(original);
+    const loc = clean(localized);
+
+    const bases = [
+        orig,
+        loc,
+        `${loc} ${orig}`, // SK + EN
+        `${orig} ${loc}`  // EN + SK
     ];
 
-    formats.forEach(q => queries.add(q));
+    const epTag = season && episode ? `S${String(season).padStart(2, '0')}E${String(episode).padStart(2, '0')}` : '';
 
-    if (localizedTitle && localizedTitle.toLowerCase() !== title.toLowerCase()) {
-        const localizedFormats = [
-            `${localizedTitle} S${s}E${e}`,
-            `${localizedTitle} ${season}x${episode}`,
-            `${localizedTitle} Season ${season} Episode ${episode}`,
-            `${localizedTitle} S${s}`,
-            `${localizedTitle} Season ${season}`,
-            `${localizedTitle}`,
-        ];
-        localizedFormats.forEach(q => queries.add(q));
+    for (const base of bases) {
+        const baseClean = shorten(noDia(base));
+        const withTag = epTag ? `${base} ${epTag}` : base;
+
+        variants.add(withTag);
+        variants.add(withTag.replace(/\s+/g, '.'));         // Prehistoric.Planet.S01E02
+        variants.add(withTag.replace(/[\s\.]+/g, ''));       // PrehistoricPlanetS01E02
+        variants.add(baseClean + epTag);                    // PrehistorickaplanetaS01E02
     }
 
-    return Array.from(queries);
+    return Array.from(variants);
 }
+
 
 
 const SKT_UID = process.env.SKT_UID || "9169";
