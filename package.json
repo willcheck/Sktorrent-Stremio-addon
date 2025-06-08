@@ -4,6 +4,7 @@
   "description": "0. Nainštaluj node.js z https://nodejs.org/en/download\r ...Bez chocolate doplnkov",
   "main": "sktorrent-addon.js",
   "scripts": {
+    "start": "node sktorrent-addon.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
