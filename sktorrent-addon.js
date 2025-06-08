@@ -97,7 +97,7 @@ posters.each((i, img) => {
 
     if (!rawId || (!category.toLowerCase().includes("film") && !category.toLowerCase().includes("seri"))) return;
 
-    const downloadUrl = `${BASE_URL}/torrent/download.php?id=${rawId}${filename ? `&f=${filename}` : ''}${seed}`;
+    const downloadUrl = `${BASE_URL}/torrent/download.php?id=${rawId}${filename ? `&f=${encodeURIComponent(filename)}` : ''}${seed}`;
 
     results.push({
         name: tooltip,
@@ -126,6 +126,13 @@ async function getInfoHashFromTorrent(url) {
                 Referer: BASE_URL
             }
         });
+
+        const contentType = res.headers['content-type'];
+        if (!contentType || !contentType.includes('application/x-bittorrent')) {
+            console.error("[ERROR] ⛔️ Server nevrátil .torrent súbor");
+            return null;
+        }
+
         const torrent = bencode.decode(res.data);
         const info = bencode.encode(torrent.info);
         const infoHash = crypto.createHash("sha1").update(info).digest("hex");
