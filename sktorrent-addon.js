@@ -12,6 +12,7 @@ function generateQueries(original, localized, season, episode) {
     const clean = t => t
         .replace(/\(.*?\)/g, '') // odstráni roky a zátvorky
         .replace(/TV (Mini )?Series/gi, '')
+        .replace(/[:\-–—]/g, ' ') // odstráni dvojbodky a pomlčky
         .trim();
 
     const noDia = str => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -20,29 +21,36 @@ function generateQueries(original, localized, season, episode) {
     const orig = clean(original);
     const loc = clean(localized);
 
+    // Poradie: lokalizovaný názov má prioritu, potom originálny, potom kombinácie
     const bases = [
-        orig,
         loc,
-        `${loc} ${orig}`, // SK + EN
-        `${orig} ${loc}`  // EN + SK
+        orig,
+        `${loc} ${orig}`,
+        `${orig} ${loc}`
     ];
 
-    const epTag = season && episode ? `S${String(season).padStart(2, '0')}E${String(episode).padStart(2, '0')}` : '';
+    const epTag = (season && episode) ? `S${String(season).padStart(2, '0')}E${String(episode).padStart(2, '0')}` : '';
 
     for (const base of bases) {
-        const baseClean = shorten(noDia(base));
-        const withTag = epTag ? `${base} ${epTag}` : base;
+        if (!base) continue;
 
-        variants.add(withTag);
-        variants.add(withTag.replace(/\s+/g, '.'));         // Prehistoric.Planet.S01E02
-        variants.add(withTag.replace(/[\s\.]+/g, ''));       // PrehistoricPlanetS01E02
-        variants.add(baseClean + epTag);                    // PrehistorickaplanetaS01E02
+        const baseClean = shorten(noDia(base));
+
+        if (epTag) {
+            variants.add(`${base} ${epTag}`);
+            variants.add(`${baseClean}${epTag}`);
+            variants.add(`${base.replace(/\s+/g, '.')} .${epTag}`);
+            variants.add(`${base.replace(/\s+/g, '.')} ${epTag}`);
+            variants.add(`${baseClean}.${epTag}`);
+        } else {
+            variants.add(base);
+            variants.add(baseClean);
+            variants.add(base.replace(/\s+/g, '.'));
+        }
     }
 
     return Array.from(variants);
 }
-
-
 
 const SKT_UID = process.env.SKT_UID || "9169";
 const SKT_PASS = process.env.SKT_PASS || "4394204647bafe4871e624cd93270ca8";
@@ -71,16 +79,9 @@ const langToFlag = {
     KR: "🇰🇷", CN: "🇨🇳"
 };
 
-function removeDiacritics(str) {
-    return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-}
-
-function shortenTitle(title, wordCount = 3) {
-    return title.split(/\s+/).slice(0, wordCount).join(" ");
-}
-
 function isMultiSeason(title) {
-    return /(S\d{2}E\d{2}-\d{2}|Complete|All Episodes|Season \d+(-\d+)?)/i.test(title);
+    // Rozšírená detekcia multi-season balíkov
+    return /(S\d{1,2}E\d{2}(-\d{2})?|Complete|All Episodes|Season(s)? \d+(-\d+)?)/i.test(title);
 }
 
 async function getTitleFromIMDb(imdbId) {
@@ -110,49 +111,49 @@ async function searchTorrents(query) {
     console.log(`[INFO] 🔎 Hľadám '${query}' na SKTorrent...`);
     try {
         const session = axios.create({
-  headers: {
-    Cookie: `uid=${SKT_UID}; pass=${SKT_PASS}`,
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-    Referer: BASE_URL
-  }
-});
+            headers: {
+                Cookie: `uid=${SKT_UID}; pass=${SKT_PASS}`,
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+                Referer: BASE_URL
+            }
+        });
 
         const res = await session.get(SEARCH_URL, { params: { search: query, category: 0 } });
         const $ = cheerio.load(res.data);
         const posters = $('a[href^="details.php"] img');
         const results = [];
 
-posters.each((i, img) => {
-    const parent = $(img).closest("a");
-    const outerTd = parent.closest("td");
-    const fullBlock = outerTd.text().replace(/\s+/g, ' ').trim();
+        posters.each((i, img) => {
+            const parent = $(img).closest("a");
+            const outerTd = parent.closest("td");
+            const fullBlock = outerTd.text().replace(/\s+/g, ' ').trim();
 
-    const href = parent.attr("href") || "";  // celý odkaz vrátane id, f, seed
-    const tooltip = parent.attr("title") || "";
-    const category = outerTd.find("b").first().text().trim();
+            const href = parent.attr("href") || "";
+            const tooltip = parent.attr("title") || "";
+            const category = outerTd.find("b").first().text().trim();
 
-    const rawId = href.match(/id=([^&]+)/)?.[1];
-    const filename = href.match(/f=([^&]+)/)?.[1];
-    const seed = href.includes("seed=1") ? "&seed=1" : "";
+            const rawId = href.match(/id=([^&]+)/)?.[1];
+            const filename = href.match(/f=([^&]+)/)?.[1];
+            const seed = href.includes("seed=1") ? "&seed=1" : "";
 
-    const sizeMatch = fullBlock.match(/Velkost\s([^|]+)/i);
-    const seedMatch = fullBlock.match(/Odosielaju\s*:\s*(\d+)/i);
-    const size = sizeMatch ? sizeMatch[1].trim() : "?";
-    const seeds = seedMatch ? seedMatch[1] : "0";
+            const sizeMatch = fullBlock.match(/Velkost\s([^|]+)/i);
+            const seedMatch = fullBlock.match(/Odosielaju\s*:\s*(\d+)/i);
+            const size = sizeMatch ? sizeMatch[1].trim() : "?";
+            const seeds = seedMatch ? seedMatch[1] : "0";
 
-    if (!rawId || (!category.toLowerCase().includes("film") && !category.toLowerCase().includes("seri"))) return;
+            if (!rawId || (!category.toLowerCase().includes("film") && !category.toLowerCase().includes("seri"))) return;
 
-    const downloadUrl = `${BASE_URL}/torrent/download.php?id=${rawId}${filename ? `&f=${encodeURIComponent(filename)}` : ''}${seed}`;
+            const downloadUrl = `${BASE_URL}/torrent/download.php?id=${rawId}${filename ? `&f=${encodeURIComponent(filename)}` : ''}${seed}`;
 
-    results.push({
-        name: tooltip,
-        id: rawId,
-        size,
-        seeds,
-        category,
-        downloadUrl
-    });
-});
+            results.push({
+                name: tooltip,
+                id: rawId,
+                size,
+                seeds,
+                category,
+                downloadUrl
+            });
+        });
 
         console.log(`[INFO] 📦 Nájdených torrentov: ${results.length}`);
         return results;
@@ -177,7 +178,7 @@ async function getInfoHashFromTorrent(url) {
         if (!contentType || !contentType.includes("application/x-bittorrent") || res.data[0] !== 0x64) {
             console.error("[ERROR] ⛔️ Server nevrátil .torrent súbor");
 
-            // Skús zobraziť celú odpoveď ako text, aby sme videli čo sa vrátilo
+            // Zobraz prvých 1000 znakov odpovede na debug
             const textPreview = res.data.toString("utf8", 0, 1000);
             console.log("[DEBUG] 🔍 Odpoveď servera (prvých 1000 znakov):\n", textPreview);
             return null;
@@ -193,12 +194,12 @@ async function getInfoHashFromTorrent(url) {
     }
 }
 
-
 async function toStream(t) {
     if (isMultiSeason(t.name)) {
         console.log(`[DEBUG] ❌ Preskakujem multi-season balík: '${t.name}'`);
         return null;
     }
+
     const langMatches = t.name.match(/\b([A-Z]{2})\b/g) || [];
     const flags = langMatches.map(code => langToFlag[code.toUpperCase()]).filter(Boolean);
     const flagsText = flags.length ? `\n${flags.join(" / ")}` : "";
@@ -223,60 +224,54 @@ async function toStream(t) {
 const getCzSkTitle = async (imdbId) => {
     try {
         const url = `https://www.csfd.cz/hledat/?q=${imdbId}`;
-        const { data } = await axios.get(url, {
-            headers: { 'User-Agent': 'Mozilla/5.0' }
-        });
-
+        const { data } = await axios.get(url);
         const $ = cheerio.load(data);
-        const title = $('.film .content h1 a').first().text().trim();
-        if (title) {
-            console.log(`[DEBUG] 🇨🇿 CZ/SK názov z ČSFD: ${title}`);
-        } else {
-            console.log(`[DEBUG] ❌ Nenašiel sa CZ/SK názov na ČSFD`);
-        }
-        return title || null;
-    } catch (err) {
-        console.log(`[ERROR] ❌ Chyba pri načítaní CZ/SK názvu z ČSFD: ${err.message}`);
+        const foundLink = $(".film .film-title a").first().attr("href");
+        if (!foundLink) return null;
+        const titlePageUrl = `https://www.csfd.cz${foundLink}`;
+        const res = await axios.get(titlePageUrl);
+        const $$ = cheerio.load(res.data);
+        return $$("title").text().split("|")[0].trim();
+    } catch {
         return null;
     }
 };
 
-builder.defineStreamHandler(async ({ type, id }) => {
-    console.log(`\n====== 🎮 RAW Požiadavka: type='${type}', id='${id}' ======`);
-
-    const [imdbId, sRaw, eRaw] = id.split(":");
-    const season = sRaw ? parseInt(sRaw) : undefined;
-    const episode = eRaw ? parseInt(eRaw) : undefined;
-
-    console.log(`====== 🎮 STREAM Požiadavka pre typ='${type}' imdbId='${imdbId}' season='${season}' episode='${episode}' ======`);
-
-    const titles = await getTitleFromIMDb(imdbId);
-    if (!titles) return { streams: [] };
-
-    const { title, originalTitle } = titles;
-
-    const queries = generateQueries(originalTitle, title, season, episode); // 👈 používaš novú funkciu
-
-    let torrents = [];
-    let attempt = 1;
-    for (const q of queries) {
-        console.log(`[DEBUG] 🔍 Pokus ${attempt++}: Hľadám '${q}'`);
-        torrents = await searchTorrents(q);
-        if (torrents.length > 0) break;
+builder.defineStreamHandler(async ({ type, id, name, season, episode }) => {
+    if (type !== "movie" && type !== "series") {
+        return { streams: [] };
     }
 
-    const streams = (await Promise.all(torrents.map(toStream))).filter(Boolean);
-    console.log(`[INFO] ✅ Odosielam ${streams.length} streamov do Stremio`);
-    return { streams };
+    // Získaj názvy (lokalizovaný aj originálny) z IMDb
+    const titles = await getTitleFromIMDb(id);
+    if (!titles) return { streams: [] };
+
+    // Vygeneruj množinu vyhľadávacích dotazov
+    const queries = generateQueries(titles.originalTitle, titles.title, season, episode);
+
+    // Pre každý query hľadaj torrenty a vyber tie, ktoré nie sú multi-season
+    for (const query of queries) {
+        const torrents = await searchTorrents(query);
+        if (!torrents.length) {
+            console.log(`[DEBUG] 🕵️‍♂️ Žiadne výsledky pre query: '${query}'`);
+            continue;
+        }
+
+        // Vytvor streamy z torrentov, filtrovaním multi-season balíkov
+        const streams = [];
+        for (const t of torrents) {
+            const stream = await toStream(t);
+            if (stream) streams.push(stream);
+        }
+
+        if (streams.length) {
+            console.log(`[INFO] ✅ Vrátené streamy pre query: '${query}' (${streams.length} položiek)`);
+            return { streams };
+        }
+    }
+
+    console.log("[WARN] ⚠️ Nepodarilo sa nájsť žiadne streamy pre daný titul.");
+    return { streams: [] };
 });
 
-
-builder.defineCatalogHandler(async ({ type, id }) => {
-    console.log(`[DEBUG] 📚 Katalóg požiadavka pre typ='${type}' id='${id}'`);
-    return { metas: [] }; // aktivuje prepojenie
-});
-
-
-console.log("\ud83d\udccc Manifest debug výpis:", builder.getInterface().manifest);
-serveHTTP(builder.getInterface(), { port: 7000 });
-console.log("\ud83d\ude80 SKTorrent addon beží na http://localhost:7000/manifest.json");
+serveHTTP(builder);
