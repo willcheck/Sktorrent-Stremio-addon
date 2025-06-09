@@ -1,6 +1,6 @@
 # Stremio-addon
 
-Tento neoficiálny doplnok pre [Stremio](https://www.stremio.com/) 
+Toto je len fork addonu pre [Stremio](https://www.stremio.com/) originálny doplnok je [Sktorrent-Stremio-addon](https://github.com/JohnnyK007/Sktorrent-Stremio-addon)
 
 ## ⚠️ Upozornenie
 
@@ -16,5 +16,5 @@ MIT License (voľné použitie, bez záruky)
 
 ## 👨‍💻 Autor
 
-Tento doplnok je experimentálny projekt na osobné účely. Autorom doplnku je @JohnnyK007. Ja používam len fork na jemné úpravy a testovanie
+Tento doplnok je experimentálny projekt na osobné účely. Autorom doplnku je [JohnnyK007](https://github.com/JohnnyK007). Ja používam len fork na jemné úpravy a testovanie
 
